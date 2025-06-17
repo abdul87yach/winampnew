@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winamp Media Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #00ff00;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .player-container {
+            display: flex;
+            height: 100vh;
+            background: #000;
+        }
+
+        .main-player {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 2px solid #333;
+            border-radius: 8px;
+            margin: 10px;
+            overflow: hidden;
+        }
+
+        .title-bar {
+            background: linear-gradient(90deg, #333, #666);
+            color: #fff;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #555;
+        }
+
+        .title-bar h1 {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .window-controls button {
+            width: 20px;
+            height: 20px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .minimize { background: #ffd700; color: #000; }
+        .maximize { background: #32cd32; color: #000; }
+        .close { background: #ff4444; color: #fff; }
+
+        .display-area {
+            background: #000;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px inset #333;
+            margin: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .track-info {
+            color: #00ff00;
+            text-align: center;
+            font-size: 12px;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+        }
+
+        .visualizer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+            padding: 0 20px;
+        }
+
+        .bar {
+            width: 4px;
+            background: linear-gradient(to top, #ff0000, #ffff00, #00ff00);
+            border-radius: 2px 2px 0 0;
+            transition: height 0.1s ease;
+        }
+
+        .video-display {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .controls {
+            background: #222;
+            padding: 15px;
+            border-top: 1px solid #444;
+        }
+
+        .transport-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .control-btn {
+            background: linear-gradient(145deg, #444, #222);
+            border: 1px solid #666;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(145deg, #555, #333);
+            transform: translateY(-1px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .progress-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .time-display {
+            color: #00ff00;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            min-width: 60px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            border: 1px inset #444;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .volume-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-slider {
+            width: 100px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            border: 1px inset #444;
+        }
+
+        .volume-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffff00, #00ff00);
+            border-radius: 3px;
+            width: 50%;
+        }
+
+        .playlist-area {
+            flex: 1;
+            background: #111;
+            border: 1px inset #333;
+            margin: 10px;
+            overflow-y: auto;
+            max-height: 200px;
+        }
+
+        .playlist-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            color: #ccc;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .playlist-item:hover {
+            background: #333;
+            color: #fff;
+        }
+
+        .playlist-item.active {
+            background: #444;
+            color: #00ff00;
+        }
+
+        .file-input {
+            margin: 10px;
+        }
+
+        .file-input input {
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 8px;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        .online-panel {
+            width: 350px;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 2px solid #333;
+            border-radius: 8px;
+            margin: 10px 10px 10px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .online-header {
+            background: linear-gradient(90deg, #333, #666);
+            color: #fff;
+            padding: 12px 15px;
+            border-bottom: 1px solid #555;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .url-input-area {
+            padding: 15px;
+            border-bottom: 1px solid #444;
+        }
+
+        .url-input {
+            width: 100%;
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+        }
+
+        .add-url-btn {
+            background: linear-gradient(145deg, #444, #222);
+            border: 1px solid #666;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .add-url-btn:hover {
+            background: linear-gradient(145deg, #555, #333);
+        }
+
+        .online-playlist {
+            flex: 1;
+            overflow-y: auto;
+            background: #111;
+        }
+
+        .online-item {
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            color: #ccc;
+            font-size: 11px;
+            line-height: 1.4;
+            transition: all 0.2s;
+        }
+
+        .online-item:hover {
+            background: #333;
+            color: #fff;
+        }
+
+        .online-item.active {
+            background: #444;
+            color: #00ff00;
+        }
+
+        .online-item .title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #fff;
+        }
+
+        .online-item .url {
+            color: #888;
+            word-break: break-all;
+        }
+
+        .eq-button {
+            background: linear-gradient(145deg, #444, #222);
+            border: 1px solid #666;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+
+        .audio-element {
+            display: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        .playing .track-info {
+            animation: pulse 2s infinite;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #222;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <div class="main-player">
+            <div class="title-bar">
+                <h1>🎵 Winamp Media Player</h1>
+                <div class="window-controls">
+                    <button class="minimize">_</button>
+                    <button class="maximize">□</button>
+                    <button class="close">×</button>
+                </div>
+            </div>
+            
+            <div class="display-area" id="displayArea">
+                <div class="track-info" id="trackInfo">
+                    <div>Selamat datang di Winamp Player</div>
+                    <div>Pilih file musik atau video untuk diputar</div>
+                </div>
+                <video class="video-display" id="videoDisplay" controls></video>
+                <div class="visualizer" id="visualizer"></div>
+            </div>
+
+            <div class="controls">
+                <div class="transport-controls">
+                    <button class="control-btn" id="prevBtn">⏮️ Prev</button>
+                    <button class="control-btn" id="playBtn">▶️ Play</button>
+                    <button class="control-btn" id="pauseBtn">⏸️ Pause</button>
+                    <button class="control-btn" id="stopBtn">⏹️ Stop</button>
+                    <button class="control-btn" id="nextBtn">⏭️ Next</button>
+                    <button class="eq-button" id="shuffleBtn">🔀 Shuffle</button>
+                    <button class="eq-button" id="repeatBtn">🔁 Repeat</button>
+                </div>
+
+                <div class="progress-area">
+                    <div class="time-display" id="currentTime">00:00</div>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="time-display" id="totalTime">00:00</div>
+                </div>
+
+                <div class="volume-area">
+                    <span>🔊 Volume:</span>
+                    <div class="volume-slider" id="volumeSlider">
+                        <div class="volume-fill" id="volumeFill"></div>
+                    </div>
+                    <span id="volumeText">50%</span>
+                </div>
+            </div>
+
+            <div class="file-input">
+                <input type="file" id="fileInput" multiple accept="audio/*,video/*">
+            </div>
+
+            <div class="playlist-area" id="playlist"></div>
+        </div>
+
+        <div class="online-panel">
+            <div class="online-header">
+                🌐 Stream Online
+            </div>
+            <div class="url-input-area">
+                <input type="text" class="url-input" id="urlInput" 
+                       placeholder="Masukkan URL video/audio (YouTube, MP4, MP3, dll...)">
+                <button class="add-url-btn" id="addUrlBtn">Tambah ke Playlist</button>
+            </div>
+            <div class="online-playlist" id="onlinePlaylist"></div>
+        </div>
+    </div>
+
+    <audio class="audio-element" id="audioElement"></audio>
+
+    <script>
+        class WinampPlayer {
+            constructor() {
+                this.currentTrack = null;
+                this.currentIndex = -1;
+                this.isPlaying = false;
+                this.playlist = [];
+                this.onlinePlaylist = [];
+                this.volume = 0.5;
+                this.shuffle = false;
+                this.repeat = false;
+                this.isVideo = false;
+                
+                this.initElements();
+                this.initEventListeners();
+                this.initVisualizer();
+                this.setupAudioContext();
+            }
+
+            initElements() {
+                this.audioElement = document.getElementById('audioElement');
+                this.videoDisplay = document.getElementById('videoDisplay');
+                this.displayArea = document.getElementById('displayArea');
+                this.trackInfo = document.getElementById('trackInfo');
+                this.visualizer = document.getElementById('visualizer');
+                this.playBtn = document.getElementById('playBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.prevBtn = document.getElementById('prevBtn');
+                this.nextBtn = document.getElementById('nextBtn');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressFill = document.getElementById('progressFill');
+                this.currentTime = document.getElementById('currentTime');
+                this.totalTime = document.getElementById('totalTime');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.volumeFill = document.getElementById('volumeFill');
+                this.volumeText = document.getElementById('volumeText');
+                this.fileInput = document.getElementById('fileInput');
+                this.playlist = document.getElementById('playlist');
+                this.urlInput = document.getElementById('urlInput');
+                this.addUrlBtn = document.getElementById('addUrlBtn');
+                this.onlinePlaylist = document.getElementById('onlinePlaylist');
+                this.shuffleBtn = document.getElementById('shuffleBtn');
+                this.repeatBtn = document.getElementById('repeatBtn');
+            }
+
+            initEventListeners() {
+                this.playBtn.addEventListener('click', () => this.play());
+                this.pauseBtn.addEventListener('click', () => this.pause());
+                this.stopBtn.addEventListener('click', () => this.stop());
+                this.prevBtn.addEventListener('click', () => this.previousTrack());
+                this.nextBtn.addEventListener('click', () => this.nextTrack());
+                
+                this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+                this.addUrlBtn.addEventListener('click', () => this.addOnlineUrl());
+                this.urlInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addOnlineUrl();
+                });
+                
+                this.progressBar.addEventListener('click', (e) => this.seekTo(e));
+                this.volumeSlider.addEventListener('click', (e) => this.setVolume(e));
+                
+                this.shuffleBtn.addEventListener('click', () => this.toggleShuffle());
+                this.repeatBtn.addEventListener('click', () => this.toggleRepeat());
+                
+                this.audioElement.addEventListener('timeupdate', () => this.updateProgress());
+                this.audioElement.addEventListener('ended', () => this.onTrackEnded());
+                this.audioElement.addEventListener('loadedmetadata', () => this.onMetadataLoaded());
+                
+                this.videoDisplay.addEventListener('timeupdate', () => this.updateProgress());
+                this.videoDisplay.addEventListener('ended', () => this.onTrackEnded());
+                this.videoDisplay.addEventListener('loadedmetadata', () => this.onMetadataLoaded());
+            }
+
+            setupAudioContext() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 256;
+                    this.bufferLength = this.analyser.frequencyBinCount;
+                    this.dataArray = new Uint8Array(this.bufferLength);
+                    
+                    const source = this.audioContext.createMediaElementSource(this.audioElement);
+                    source.connect(this.analyser);
+                    this.analyser.connect(this.audioContext.destination);
+                } catch (e) {
+                    console.log('Audio context not supported');
+                }
+            }
+
+            initVisualizer() {
+                for (let i = 0; i < 32; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'bar';
+                    bar.style.height = '2px';
+                    this.visualizer.appendChild(bar);
+                }
+            }
+
+            updateVisualizer() {
+                if (!this.analyser || !this.isPlaying) return;
+                
+                this.analyser.getByteFrequencyData(this.dataArray);
+                const bars = this.visualizer.querySelectorAll('.bar');
+                
+                for (let i = 0; i < bars.length; i++) {
+                    const barHeight = (this.dataArray[i * 4] / 255) * 50;
+                    bars[i].style.height = Math.max(barHeight, 2) + 'px';
+                }
+                
+                if (this.isPlaying) {
+                    requestAnimationFrame(() => this.updateVisualizer());
+                }
+            }
+
+            handleFileSelect(event) {
+                const files = Array.from(event.target.files);
+                files.forEach(file => {
+                    const url = URL.createObjectURL(file);
+                    const isVideo = file.type.startsWith('video/');
+                    this.localPlaylist.push({
+                        name: file.name,
+                        url: url,
+                        type: 'local',
+                        isVideo: isVideo
+                    });
+                });
+                this.updatePlaylistDisplay();
+            }
+
+            addOnlineUrl() {
+                const url = this.urlInput.value.trim();
+                if (!url) return;
+                
+                let title = 'Online Stream';
+                if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                    title = 'YouTube Video';
+                } else if (url.includes('.mp4')) {
+                    title = 'MP4 Video';
+                } else if (url.includes('.mp3')) {
+                    title = 'MP3 Audio';
+                }
+                
+                const isVideo = url.includes('youtube.com') || url.includes('youtu.be') || 
+                               url.includes('.mp4') || url.includes('.webm') || url.includes('.mkv');
+                
+                this.onlinePlaylist.push({
+                    name: title,
+                    url: url,
+                    type: 'online',
+                    isVideo: isVideo
+                });
+                
+                this.urlInput.value = '';
+                this.updateOnlinePlaylistDisplay();
+            }
+
+            updatePlaylistDisplay() {
+                this.playlist.innerHTML = '';
+                this.localPlaylist.forEach((track, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'playlist-item';
+                    if (this.currentTrack === track) item.classList.add('active');
+                    
+                    item.innerHTML = `
+                        ${track.isVideo ? '🎬' : '🎵'} ${track.name}
+                    `;
+                    
+                    item.addEventListener('click', () => this.playTrack(track, index));
+                    this.playlist.appendChild(item);
+                });
+            }
+
+            updateOnlinePlaylistDisplay() {
+                this.onlinePlaylist.innerHTML = '';
+                this.onlinePlaylist.forEach((track, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'online-item';
+                    if (this.currentTrack === track) item.classList.add('active');
+                    
+                    item.innerHTML = `
+                        <div class="title">${track.isVideo ? '🎬' : '🎵'} ${track.name}</div>
+                        <div class="url">${track.url}</div>
+                    `;
+                    
+                    item.addEventListener('click', () => this.playOnlineTrack(track, index));
+                    this.onlinePlaylist.appendChild(item);
+                });
+            }
+
+            get localPlaylist() {
+                return this.playlist._tracks || (this.playlist._tracks = []);
+            }
+
+            get allTracks() {
+                return [...this.localPlaylist, ...this.onlinePlaylist];
+            }
+
+            playTrack(track, index) {
+                this.currentTrack = track;
+                this.currentIndex = this.localPlaylist.indexOf(track);
+                this.loadAndPlay();
+                this.updatePlaylistDisplay();
+            }
+
+            playOnlineTrack(track, index) {
+                this.currentTrack = track;
+                this.currentIndex = this.localPlaylist.length + index;
+                this.loadAndPlay();
+                this.updateOnlinePlaylistDisplay();
+            }
+
+            loadAndPlay() {
+                if (!this.currentTrack) return;
+                
+                this.isVideo = this.currentTrack.isVideo;
+                
+                if (this.isVideo && !this.currentTrack.url.includes('youtube.com')) {
+                    this.audioElement.pause();
+                    this.audioElement.style.display = 'none';
+                    this.videoDisplay.style.display = 'block';
+                    this.videoDisplay.src = this.currentTrack.url;
+                    this.videoDisplay.volume = this.volume;
+                    this.currentMediaElement = this.videoDisplay;
+                } else {
+                    this.videoDisplay.pause();
+                    this.videoDisplay.style.display = 'none';
+                    this.audioElement.style.display = 'block';
+                    this.audioElement.src = this.currentTrack.url;
+                    this.audioElement.volume = this.volume;
+                    this.currentMediaElement = this.audioElement;
+                }
+                
+                this.updateTrackInfo();
+                this.play();
+            }
+
+            updateTrackInfo() {
+                if (!this.currentTrack) return;
+                
+                const typeIcon = this.currentTrack.isVideo ? '🎬' : '🎵';
+                const sourceIcon = this.currentTrack.type === 'online' ? '🌐' : '💿';
+                
+                this.trackInfo.innerHTML = `
+                    <div>${typeIcon} ${this.currentTrack.name}</div>
+                    <div>${sourceIcon} ${this.currentTrack.type === 'online' ? 'Online Stream' : 'Local File'}</div>
+                `;
+            }
+
+            play() {
+                if (!this.currentTrack) {
+                    if (this.localPlaylist.length > 0) {
+                        this.playTrack(this.localPlaylist[0], 0);
+                        return;
+                    } else if (this.onlinePlaylist.length > 0) {
+                        this.playOnlineTrack(this.onlinePlaylist[0], 0);
+                        return;
+                    }
+                    return;
+                }
+                
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+                
+                const playPromise = this.currentMediaElement.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        this.isPlaying = true;
+                        this.displayArea.classList.add('playing');
+                        this.updateVisualizer();
+                    }).catch(error => {
+                        console.log('Playback failed:', error);
+                    });
+                }
+            }
+
+            pause() {
+                if (this.currentMediaElement) {
+                    this.currentMediaElement.pause();
+                    this.isPlaying = false;
+                    this.displayArea.classList.remove('playing');
+                }
+            }
+
+            stop() {
+                this.pause();
+                if (this.currentMediaElement) {
+                    this.currentMediaElement.currentTime = 0;
+                }
+                this.updateProgress();
+            }
+
+            nextTrack() {
+                const allTracks = this.allTracks;
+                if (allTracks.length === 0) return;
+                
+                if (this.shuffle) {
+                    this.currentIndex = Math.floor(Math.random() * allTracks.length);
+                } else {
+                    this.currentIndex = (this.currentIndex + 1) % allTracks.length;
+                }
+                
+                const track = allTracks[this.currentIndex];
+                if (this.currentIndex < this.localPlaylist.length) {
+                    this.playTrack(track, this.currentIndex);
+                } else {
+                    this.playOnlineTrack(track, this.currentIndex - this.localPlaylist.length);
+                }
+            }
+
+            previousTrack() {
+                const allTracks = this.allTracks;
+                if (allTracks.length === 0) return;
+                
+                if (this.shuffle) {
+                    this.currentIndex = Math.floor(Math.random() * allTracks.length);
+                } else {
+                    this.currentIndex = this.currentIndex <= 0 ? allTracks.length - 1 : this.currentIndex - 1;
+                }
+                
+                const track = allTracks[this.currentIndex];
+                if (this.currentIndex < this.localPlaylist.length) {
+                    this.playTrack(track, this.currentIndex);
+                } else {
+                    this.playOnlineTrack(track, this.currentIndex - this.localPlaylist.length);
+                }
+            }
+
+            onTrackEnded() {
+                if (this.repeat) {
+                    this.currentMediaElement.currentTime = 0;
+                    this.play();
+                } else {
+                    this.nextTrack();
+                }
+            }
+
+            seekTo(event) {
+                if (!this.currentMediaElement) return;
+                
+                const rect = this.progressBar.getBoundingClientRect();
+                const pos = (event.clientX - rect.left) / rect.width;
+                this.currentMediaElement.currentTime = pos * this.currentMediaElement.duration;
+            }
+
+            setVolume(event) {
+                const rect = this.volumeSlider.getBoundingClientRect();
+                this.volume = (event.clientX - rect.left) / rect.width;
+                this.volume = Math.max(0, Math.min(1, this.volume));
+                
+                if (this.currentMediaElement) {
+                    this.currentMediaElement.volume = this.volume;
+                }
+                
+                this.volumeFill.style.width = (this.volume * 100) + '%';
+                this.volumeText.textContent = Math.round(this.volume * 100) + '%';
+            }
+
+            updateProgress() {
+                if (!this.currentMediaElement) return;
+                
+                const current = this.currentMediaElement.currentTime;
+                const total = this.currentMediaElement.duration;
+                
+                if (!isNaN(total)) {
+                    const progress = (current / total) * 100;
+                    this.progressFill.style.width = progress + '%';
+                    
+                    this.currentTime.textContent = this.formatTime(current);
+                    this.totalTime.textContent = this.formatTime(total);
+                }
+            }
+
+            onMetadataLoaded() {
+                this.updateProgress();
+            }
+
+            formatTime(seconds) {
+                if (isNaN(seconds)) return '00:00';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            toggleShuffle() {
+                this.shuffle = !this.shuffle;
+                this.shuffleBtn.style.background = this.shuffle ? 
+                    'linear-gradient(145deg, #666, #444)' : 
+                    'linear-gradient(145deg, #444, #222)';
+            }
+
+            toggleRepeat() {
+                this.repeat = !this.repeat;
+                this.repeatBtn.style.background = this.repeat ? 
+                    'linear-gradient(145deg, #666, #444)' : 
+                    'linear-gradient(145deg, #444, #222)';
+            }
+        }
+
+        // Initialize player when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new WinampPlayer();
+        });
+    </script>
+</body>
+</html>
